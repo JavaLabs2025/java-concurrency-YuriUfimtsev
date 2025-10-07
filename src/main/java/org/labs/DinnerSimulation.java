@@ -1,6 +1,7 @@
 package org.labs;
 
 import org.labs.config.DinnerConfig;
+import org.labs.model.DinnerStatistics;
 import org.labs.model.Programmer;
 import org.labs.model.Spoon;
 import org.labs.model.Waiter;
@@ -14,12 +15,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class DinnerSimulation {
     private static final Logger logger = LoggerFactory.getLogger(DinnerSimulation.class);
 
-    private final ExecutorService programmersExecutor;
-    private final ExecutorService waitersExecutor;
+    private ExecutorService programmersExecutor;
+    private ExecutorService waitersExecutor;
 
     private final KitchenService kitchenService;
     private final OrdersService ordersService;
@@ -45,22 +48,99 @@ public class DinnerSimulation {
         this.waiters = createWaiters(config.waitersCount(), config.waitersServingDelay());
     }
 
-    public void simulateDinner() {
-        for (var programmer: programmers) {
-            programmersExecutor.submit(programmer);
+    /**
+     * Simulates programmers dinner based on the configuration set when creating an object.
+     * The simulation time is potentially unlimited, which means
+     * it will run until all the waiters and programmers have finished due to lack of food or until 365 days has passed.
+     */
+    public void simulateDinner() throws InterruptedException {
+        simulateDinner(Duration.ofDays(365));
+    }
+
+    /**
+     * Simulates programmers dinner based on the configuration set when creating an object.
+     *
+     * @param acceptableDuration time interval during which programmers and waiters will not be interrupted.
+     *                           Counts down when all waiters have launched.
+     * @return statistics of simulation.
+     */
+    public DinnerStatistics simulateDinner(Duration acceptableDuration) throws InterruptedException {
+        // Clear state after previous iteration (if needed)
+        if (this.waitersExecutor.isShutdown() || this.programmersExecutor.isShutdown()) {
+            this.waitersExecutor = Executors.newFixedThreadPool(waiters.size());
+            this.programmersExecutor = Executors.newFixedThreadPool(programmers.size());
         }
 
-        for (var waiter: waiters) {
+        logger.info("Launching {} waiters", waiters.size());
+        for (var waiter : waiters) {
             waitersExecutor.submit(waiter);
         }
 
+        logger.info("All waiters have been launched");
+        var startTime = System.nanoTime();
+
+        logger.info("Launching {} programmers", programmers.size());
+        for (var programmer : programmers) {
+            programmersExecutor.submit(programmer);
+        }
+
+        logger.info("All programmers have been launched. Acceptable duration: {}", acceptableDuration);
+
+        programmersExecutor.shutdown();
+        waitersExecutor.shutdown();
+
+        var remainingNanosecond = acceptableDuration.getNano() - (System.nanoTime() - startTime);
+        var waitersFinished = waitersExecutor.awaitTermination(remainingNanosecond, TimeUnit.NANOSECONDS);
+        var programmersFinished = programmersExecutor.awaitTermination(remainingNanosecond, TimeUnit.NANOSECONDS);
+
+        var simulationTime = System.nanoTime() - startTime;
+
+        waitersExecutor.shutdownNow();
+        programmersExecutor.shutdownNow();
+
+        var statistics = getStatistics(
+                !waitersFinished || !programmersFinished,
+                simulationTime
+        );
+        printStatistics(statistics);
+
+        return statistics;
+    }
+
+    private static void printStatistics(DinnerStatistics statistics) {
+        logger.info("------------------Dinner Statistics----------------");
+        logger.info("Duration: {}", statistics.dinnerDuration());
+        logger.info(statistics.isInterrupted()
+                ? "Dinner was interrupted due to overtime"
+                : "Dinner was successfully completed");
+        logger.info("Remaining portions in the kitchen: {}", statistics.remainingPortionsInKitchen());
+        logger.info("------------------Programmers eaten soups statistics: -----------------");
+        statistics.visitorIdToEatenCount().forEach((key, value) ->
+                logger.info("Programmer {}: {} portions were eaten", key, value)
+        );
+    }
+
+    private DinnerStatistics getStatistics(boolean simulationInterrupted, long elapsedNanoseconds) {
+        var remainingFood = this.kitchenService.getSoupPortionsCount();
+        var visitorIdToEatenCount = programmers.stream()
+                .collect(Collectors.toMap(
+                        Programmer::getId,
+                        Programmer::getEatenCount
+                ));
+
+        return new DinnerStatistics(
+                remainingFood,
+                visitorIdToEatenCount,
+                Duration.ofNanos(elapsedNanoseconds),
+                simulationInterrupted
+        );
     }
 
     private List<Waiter> createWaiters(int waitersCount, Duration servingDelay) {
         var waiters = new ArrayList<Waiter>(waitersCount);
         for (var i = 0; i < waitersCount; i++) {
             var waiter = new Waiter(
-                i + 1,
+                    i + 1,
                     this.ordersService,
                     this.kitchenService,
                     servingDelay

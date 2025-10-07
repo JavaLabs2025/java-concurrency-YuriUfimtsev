@@ -11,8 +11,8 @@ public class Programmer implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(Programmer.class);
 
     private final int id;
-    private final Spoon leftFork;
-    private final Spoon rightFork;
+    private final Spoon leftSpoon;
+    private final Spoon rightSpoon;
     private volatile boolean hasSoupPortion = false;
     private final OrdersService ordersService;
     private final KitchenService kitchenService;
@@ -21,11 +21,11 @@ public class Programmer implements Runnable {
     private final Duration discussionTime;
     private final Duration eatTime;
 
-    public Programmer(int id, Spoon leftFork, Spoon rightFork, OrdersService ordersService,
+    public Programmer(int id, Spoon leftFork, Spoon rightSpoon, OrdersService ordersService,
                       KitchenService kitchenService, Duration discussionTime, Duration eatTime) {
         this.id = id;
-        this.leftFork = leftFork;
-        this.rightFork = rightFork;
+        this.leftSpoon = leftFork;
+        this.rightSpoon = rightSpoon;
         this.discussionTime = discussionTime;
         this.eatTime = eatTime;
         this.ordersService = ordersService;
@@ -47,21 +47,30 @@ public class Programmer implements Runnable {
     @Override
     public void run() {
         try {
+            logger.info("Programmer {} is running", id);
+
             while (kitchenService.getSoupPortionsCount() > 0) {
                 discuss();
 
                 ordersService.makeOrder(this);
-                while (!hasSoupPortion) {
+                logger.info("Programmer {} has placed an order and is now waiting for the soup", id);
+
+                while (!hasSoupPortion && kitchenService.getSoupPortionsCount() > 0) {
                     Thread.onSpinWait();
                 }
 
-                synchronized (leftFork) {
-                    synchronized (rightFork) {
+                if (kitchenService.getSoupPortionsCount() == 0) {
+                    break;
+                }
+
+                synchronized (leftSpoon) {
+                    synchronized (rightSpoon) {
                         eat();
                     }
                 }
-
             }
+
+            logger.info("Soup portions count equals to 0. Programmer {} was finished ", id);
         } catch (InterruptedException exception) {
             logger.info("Programmer {} was interrupted", id);
             Thread.currentThread().interrupt();
@@ -77,7 +86,7 @@ public class Programmer implements Runnable {
     }
 
     private void discuss() throws InterruptedException {
-        logger.info("Programmer {} start discussing for {}", id, discussionTime);
+        logger.info("Programmer {} starts discussing for {}", id, discussionTime);
         Thread.sleep(discussionTime);
     }
 }

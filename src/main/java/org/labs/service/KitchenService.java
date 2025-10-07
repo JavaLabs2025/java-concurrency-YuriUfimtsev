@@ -14,6 +14,9 @@ public class KitchenService {
     }
 
     public boolean takeSoupPortion() {
-        return soupPortionsCount.decrementAndGet() > 0;
+        var previousPortionsCount = soupPortionsCount.getAndUpdate(portionsCount ->
+                portionsCount > 0 ? portionsCount - 1 : portionsCount
+        );
+        return previousPortionsCount > 0;
     }
 }
