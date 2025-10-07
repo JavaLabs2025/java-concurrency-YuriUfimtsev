@@ -25,7 +25,7 @@ public class Waiter implements Runnable {
     @Override
     public void run() {
         try {
-            logger.info("Waiter {} is running", id);
+            logger.debug("Waiter {} is running", id);
 
             while (kitchenService.getSoupPortionsCount() > 0) {
                 var nextOrder = ordersService.getOrder();
@@ -34,22 +34,22 @@ public class Waiter implements Runnable {
                 }
 
                 if (!kitchenService.takeSoupPortion()) {
-                    logger.info("Soup portions count equals to 0. Waiter {} was finished ", id);
+                    logger.debug("Soup portions count equals to 0. Waiter {} was finished ", id);
                     break;
                 }
 
                 serveSoupPortion(nextOrder);
             }
 
-            logger.info("Soup portions count equals to 0. Waiter {} was finished ", id);
+            logger.debug("Soup portions count equals to 0. Waiter {} was finished ", id);
         } catch (InterruptedException exception) {
-                logger.info("Waiter {} was interrupted", id);
+                logger.warn("Waiter {} was interrupted", id);
                 Thread.currentThread().interrupt();
             }
     }
 
     private void serveSoupPortion(Order order) throws InterruptedException {
-        logger.info("Waiter {} starts serving soup to the visitor {} for {}",
+        logger.debug("Waiter {} starts serving soup to the visitor {} for {}",
                 id, order.visitorId(), timePerClient);
         Thread.sleep(timePerClient);
         order.soupPortionNotifier().setSoupPortion();

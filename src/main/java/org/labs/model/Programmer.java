@@ -47,13 +47,13 @@ public class Programmer implements Runnable {
     @Override
     public void run() {
         try {
-            logger.info("Programmer {} is running", id);
+            logger.debug("Programmer {} is running", id);
 
             while (kitchenService.getSoupPortionsCount() > 0) {
                 discuss();
 
                 ordersService.makeOrder(this);
-                logger.info("Programmer {} has placed an order and is now waiting for the soup", id);
+                logger.debug("Programmer {} has placed an order and is now waiting for the soup", id);
 
                 while (!hasSoupPortion && kitchenService.getSoupPortionsCount() > 0) {
                     Thread.onSpinWait();
@@ -70,15 +70,15 @@ public class Programmer implements Runnable {
                 }
             }
 
-            logger.info("Soup portions count equals to 0. Programmer {} was finished ", id);
+            logger.debug("Soup portions count equals to 0. Programmer {} was finished ", id);
         } catch (InterruptedException exception) {
-            logger.info("Programmer {} was interrupted", id);
+            logger.warn("Programmer {} was interrupted", id);
             Thread.currentThread().interrupt();
         }
     }
 
     private void eat() throws InterruptedException {
-        logger.info("Programmer {} starts eating for {}", id, eatTime);
+        logger.debug("Programmer {} starts eating for {}", id, eatTime);
         Thread.sleep(eatTime);
 
         ++eatenCount;
@@ -86,7 +86,7 @@ public class Programmer implements Runnable {
     }
 
     private void discuss() throws InterruptedException {
-        logger.info("Programmer {} starts discussing for {}", id, discussionTime);
+        logger.debug("Programmer {} starts discussing for {}", id, discussionTime);
         Thread.sleep(discussionTime);
     }
 }

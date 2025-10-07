@@ -18,11 +18,11 @@ public class Spoon {
 
     public void take(int holderId) {
         lock.lock();
-        logger.info("Spoon {} is taken by holder {}", id, holderId);
+        logger.debug("Spoon {} is taken by holder {}", id, holderId);
     }
 
     public void putDown(int holderId) {
         lock.unlock();
-        logger.info("Spoon {} is put down by holder {}", id, holderId);
+        logger.debug("Spoon {} is put down by holder {}", id, holderId);
     }
 }
