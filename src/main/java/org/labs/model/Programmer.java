@@ -13,27 +13,29 @@ public class Programmer implements Runnable {
     private final int id;
     private final Spoon leftSpoon;
     private final Spoon rightSpoon;
-    private volatile boolean hasSoupPortion = false;
+    private volatile SoupPortionStatus soupPortionStatus = SoupPortionStatus.NO_PORTION;
     private final OrdersService ordersService;
-    private final KitchenService kitchenService;
     private int eatenCount = 0;
 
     private final Duration discussionTime;
     private final Duration eatTime;
 
     public Programmer(int id, Spoon leftFork, Spoon rightSpoon, OrdersService ordersService,
-                      KitchenService kitchenService, Duration discussionTime, Duration eatTime) {
+                      Duration discussionTime, Duration eatTime) {
         this.id = id;
         this.leftSpoon = leftFork;
         this.rightSpoon = rightSpoon;
         this.discussionTime = discussionTime;
         this.eatTime = eatTime;
         this.ordersService = ordersService;
-        this.kitchenService = kitchenService;
     }
 
-    public void setHasSoupPortion() {
-        this.hasSoupPortion = true;
+    public void setSoupPortion() {
+        this.soupPortionStatus = SoupPortionStatus.HAS_PORTION;
+    }
+
+    public void noMoreSoup() {
+        this.soupPortionStatus = SoupPortionStatus.NO_MORE_PORTIONS;
     }
 
     public int getId() {
@@ -49,17 +51,19 @@ public class Programmer implements Runnable {
         try {
             logger.debug("Programmer {} is running", id);
 
-            while (kitchenService.getSoupPortionsCount() > 0) {
+            while (ordersService.getAreOrdersAccepted()) {
                 discuss();
 
-                ordersService.makeOrder(this);
+                if (!ordersService.makeOrder(this)) {
+                    break;
+                }
                 logger.debug("Programmer {} has placed an order and is now waiting for the soup", id);
 
-                while (!hasSoupPortion && kitchenService.getSoupPortionsCount() > 0) {
+                while (soupPortionStatus == SoupPortionStatus.NO_PORTION) {
                     Thread.onSpinWait();
                 }
 
-                if (kitchenService.getSoupPortionsCount() == 0) {
+                if (soupPortionStatus == SoupPortionStatus.NO_MORE_PORTIONS) {
                     break;
                 }
 
@@ -82,11 +86,17 @@ public class Programmer implements Runnable {
         Thread.sleep(eatTime);
 
         ++eatenCount;
-        hasSoupPortion = false;
+        soupPortionStatus = SoupPortionStatus.NO_PORTION;
     }
 
     private void discuss() throws InterruptedException {
         logger.debug("Programmer {} starts discussing for {}", id, discussionTime);
         Thread.sleep(discussionTime);
+    }
+
+    private enum SoupPortionStatus {
+        HAS_PORTION,
+        NO_PORTION,
+        NO_MORE_PORTIONS
     }
 }

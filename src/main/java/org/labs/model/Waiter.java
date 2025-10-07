@@ -22,6 +22,10 @@ public class Waiter implements Runnable {
         this.kitchenService = kitchenService;
     }
 
+    public int getId() {
+        return id;
+    }
+
     @Override
     public void run() {
         try {
@@ -34,11 +38,28 @@ public class Waiter implements Runnable {
                 }
 
                 if (!kitchenService.takeSoupPortion()) {
+                    nextOrder.noMorePortionsNotifier().notifyVisitor();
                     logger.debug("Soup portions count equals to 0. Waiter {} was finished ", id);
                     break;
                 }
 
                 serveSoupPortion(nextOrder);
+            }
+
+            // Closes queue for new orders
+            if (ordersService.getAreOrdersAccepted()) {
+                ordersService.setOrdersNotAccepted(this);
+            }
+
+            // Notifies the visitors (who have already placed orders) that the portions have run out.
+            // Также дополнительная проверка на случай программистов, публикующих заказ и не знающих, что очередь закрыта.
+            var retryCount = 0;
+            while (retryCount < 3 && ordersService.ordersCount() > 0) {
+                var nextOrder = ordersService.getOrder();
+                if (nextOrder != null) {
+                    nextOrder.noMorePortionsNotifier().notifyVisitor();
+                }
+                retryCount++;
             }
 
             logger.debug("Soup portions count equals to 0. Waiter {} was finished ", id);

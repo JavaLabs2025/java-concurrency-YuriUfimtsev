@@ -51,10 +51,10 @@ public class DinnerSimulation {
     /**
      * Simulates programmers dinner based on the configuration set when creating an object.
      * The simulation time is potentially unlimited, which means
-     * it will run until all the waiters and programmers have finished due to lack of food or until 365 days has passed.
+     * it will run until all the waiters and programmers have finished due to lack of food or until 365 day has passed.
      */
-    public void simulateDinner() throws InterruptedException {
-        simulateDinner(Duration.ofDays(365));
+    public DinnerStatistics simulateDinner() throws InterruptedException {
+        return simulateDinner(Duration.ofDays(365));
     }
 
     /**
@@ -89,14 +89,14 @@ public class DinnerSimulation {
         programmersExecutor.shutdown();
         waitersExecutor.shutdown();
 
-        var remainingNanosecond = acceptableDuration.getNano() - (System.nanoTime() - startTime);
-        var waitersFinished = waitersExecutor.awaitTermination(remainingNanosecond, TimeUnit.NANOSECONDS);
+        var remainingNanosecond = acceptableDuration.toNanos() - (System.nanoTime() - startTime);
         var programmersFinished = programmersExecutor.awaitTermination(remainingNanosecond, TimeUnit.NANOSECONDS);
+        var waitersFinished = waitersExecutor.awaitTermination(remainingNanosecond, TimeUnit.NANOSECONDS);
 
         var simulationTime = System.nanoTime() - startTime;
 
-        waitersExecutor.shutdownNow();
         programmersExecutor.shutdownNow();
+        waitersExecutor.shutdownNow();
 
         var statistics = getStatistics(
                 !waitersFinished || !programmersFinished,
@@ -164,7 +164,6 @@ public class DinnerSimulation {
                     leftSpoon,
                     rightSpoon,
                     this.ordersService,
-                    this.kitchenService,
                     discussionDelay,
                     eatingDelay
             );

@@ -1,4 +1,4 @@
-package org.labs.model;
+package org.labs.model.notifier;
 
 @FunctionalInterface
 public interface SoupPortionNotifier {
