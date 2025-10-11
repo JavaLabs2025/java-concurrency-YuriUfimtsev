@@ -84,6 +84,10 @@ public class Programmer implements Runnable {
     private void eat() throws InterruptedException {
         logger.debug("Programmer {} starts eating for {}", id, eatTime);
         Thread.sleep(eatTime);
+        leftSpoon.take(this.id);
+        rightSpoon.take(this.id);
+        rightSpoon.putDown(this.id);
+        leftSpoon.putDown(this.id);
 
         ++eatenCount;
         soupPortionStatus = SoupPortionStatus.NO_PORTION;
