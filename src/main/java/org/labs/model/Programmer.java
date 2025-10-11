@@ -82,10 +82,13 @@ public class Programmer implements Runnable {
     }
 
     private void eat() throws InterruptedException {
-        logger.debug("Programmer {} starts eating for {}", id, eatTime);
-        Thread.sleep(eatTime);
         leftSpoon.take(this.id);
         rightSpoon.take(this.id);
+
+        var durationMilliseconds = this.random.nextLong(minEatMilliseconds, maxEatMilliseconds);
+        logger.debug("Programmer {} starts eating for {} milliseconds", id, durationMilliseconds);
+        Thread.sleep(durationMilliseconds);
+
         rightSpoon.putDown(this.id);
         leftSpoon.putDown(this.id);
 

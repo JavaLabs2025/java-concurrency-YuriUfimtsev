@@ -1,5 +1,7 @@
 package org.labs.config;
 
+import org.labs.model.DurationRange;
+
 import java.time.Duration;
 
 public record DinnerConfig(
@@ -7,6 +9,6 @@ public record DinnerConfig(
     int waitersCount,
     long soupPortionsCount,
     Duration waitersServingDelay,
-    Duration visitorsDiscussionDelay,
-    Duration visitorsEatingDelay
+    DurationRange visitorsDiscussionDelay,
+    DurationRange visitorsEatingDelay
 ) { }
