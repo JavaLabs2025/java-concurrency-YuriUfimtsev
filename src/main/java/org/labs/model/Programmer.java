@@ -1,14 +1,14 @@
 package org.labs.model;
 
-import org.labs.service.KitchenService;
 import org.labs.service.OrdersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class Programmer implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(Programmer.class);
+    private final ThreadLocalRandom random = ThreadLocalRandom.current();
 
     private final int id;
     private final Spoon leftSpoon;
@@ -17,16 +17,21 @@ public class Programmer implements Runnable {
     private final OrdersService ordersService;
     private int eatenCount = 0;
 
-    private final Duration discussionTime;
-    private final Duration eatTime;
+    private final long minDiscussionMilliseconds;
+    private final long maxDiscussionMilliseconds;
+
+    private final long minEatMilliseconds;
+    private final long maxEatMilliseconds;
 
     public Programmer(int id, Spoon leftFork, Spoon rightSpoon, OrdersService ordersService,
-                      Duration discussionTime, Duration eatTime) {
+                      DurationRange discussionTimeRange, DurationRange eatTimeRange) {
         this.id = id;
         this.leftSpoon = leftFork;
         this.rightSpoon = rightSpoon;
-        this.discussionTime = discussionTime;
-        this.eatTime = eatTime;
+        this.minDiscussionMilliseconds = discussionTimeRange.minDuration().toMillis();
+        this.maxDiscussionMilliseconds = discussionTimeRange.maxDuration().toMillis();
+        this.minEatMilliseconds = eatTimeRange.minDuration().toMillis();
+        this.maxEatMilliseconds = eatTimeRange.maxDuration().toMillis();
         this.ordersService = ordersService;
     }
 
@@ -97,8 +102,9 @@ public class Programmer implements Runnable {
     }
 
     private void discuss() throws InterruptedException {
-        logger.debug("Programmer {} starts discussing for {}", id, discussionTime);
-        Thread.sleep(discussionTime);
+        var durationMilliseconds = this.random.nextLong(minDiscussionMilliseconds, maxDiscussionMilliseconds);
+        logger.debug("Programmer {} starts discussing for {} milliseconds", id, durationMilliseconds);
+        Thread.sleep(durationMilliseconds);
     }
 
     private enum SoupPortionStatus {

@@ -64,9 +64,9 @@ public class Waiter implements Runnable {
 
             logger.debug("Soup portions count equals to 0. Waiter {} was finished ", id);
         } catch (InterruptedException exception) {
-                logger.warn("Waiter {} was interrupted", id);
-                Thread.currentThread().interrupt();
-            }
+            logger.warn("Waiter {} was interrupted", id);
+            Thread.currentThread().interrupt();
+        }
     }
 
     private void serveSoupPortion(Order order) throws InterruptedException {
